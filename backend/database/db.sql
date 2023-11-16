@@ -1,3 +1,5 @@
+-- Crear Tablas
+
 CREATE TABLE
     empresa(
         idempresa SERIAL NOT NULL,
@@ -71,7 +73,7 @@ VALUES (
         'ElectriBarranquilla'
     );
 
--- Numeraciones para la empresa 1
+-- Poblado Tablas
 
 INSERT INTO
     numeracion (
@@ -1250,3 +1252,212 @@ VALUES (
         1100.00,
         165.00
     );
+
+-- -------CONSULTAS------- --
+
+-- Consulta 1
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COUNT(
+        CASE
+            WHEN est.exitoso = false THEN 1
+        END
+    ) AS documentos_fallidos,
+    COUNT(
+        CASE
+            WHEN est.exitoso = true THEN 1
+        END
+    ) AS documentos_exitosos
+FROM empresa e
+    JOIN numeracion n ON e.idempresa = n.idempresa
+    JOIN documento doc ON n.idnumeracion = doc.idnumeracion
+    JOIN estado est ON doc.idestado = est.idestado
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial
+HAVING
+    COUNT(
+        CASE
+            WHEN est.exitoso = false THEN 1
+        END
+    ) > COUNT(
+        CASE
+            WHEN est.exitoso = true THEN 1
+        END
+    );
+
+-- Consulta 2
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN td.descripcion = 'Factura'
+                AND d.fecha BETWEEN '2023-01-01' AND '2023-12-31' THEN 1
+                ELSE 0
+            END
+        ),
+        0
+    ) AS total_facturas,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN td.descripcion = 'Nota Débito'
+                AND d.fecha BETWEEN '2023-01-01' AND '2023-12-31' THEN 1
+                ELSE 0
+            END
+        ),
+        0
+    ) AS total_notas_debito,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN td.descripcion = 'Nota Crédito'
+                AND d.fecha BETWEEN '2023-01-01' AND '2023-12-31' THEN 1
+                ELSE 0
+            END
+        ),
+        0
+    ) AS total_notas_credito
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento d ON n.idnumeracion = d.idnumeracion
+    LEFT JOIN tipodocumento td ON n.idtipodocumento = td.idtipodocumento
+WHERE
+    d.fecha BETWEEN '2023-01-01' AND '2023-12-31'
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial;
+
+-- Consulta 3
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    est.descripcion AS estado,
+    COUNT(d.iddocumento) AS cantidad_documentos
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento d ON n.idnumeracion = d.idnumeracion
+    LEFT JOIN estado est ON d.idestado = est.idestado
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    est.descripcion
+ORDER BY
+    e.idempresa,
+    est.descripcion;
+
+-- Consulta 4
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COUNT(
+        CASE
+            WHEN est.exitoso = false THEN 1
+        END
+    ) AS documentos_no_exitosos
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento doc ON n.idnumeracion = doc.idnumeracion
+    LEFT JOIN estado est ON doc.idestado = est.idestado
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial
+HAVING
+    COUNT(
+        CASE
+            WHEN est.exitoso = false THEN 1
+        END
+    ) > 3;
+
+-- Consulta 5
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COUNT(
+        CASE
+            WHEN doc.numero < n.consecutivoinicial
+            OR doc.numero > n.consecutivofinal THEN 1
+            WHEN doc.fecha < n.vigenciainicial
+            OR doc.fecha > n.vigenciafinal THEN 1
+            ELSE NULL
+        END
+    ) AS documentos_fuera_rango_vigencia
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento doc ON n.idnumeracion = doc.idnumeracion
+WHERE (
+        doc.numero IS NOT NULL
+        AND (
+            doc.numero < n.consecutivoinicial
+            OR doc.numero > n.consecutivofinal
+        )
+    )
+    OR (
+        doc.fecha IS NOT NULL
+        AND (
+            doc.fecha < n.vigenciainicial
+            OR doc.fecha > n.vigenciafinal
+        )
+    )
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial;
+
+-- Consulta 6
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN td.descripcion = 'Factura' THEN d.base + d.impuestos
+                ELSE 0
+            END
+        ),
+        0
+    ) AS total_dinero_recibido
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento d ON n.idnumeracion = d.idnumeracion
+    LEFT JOIN tipodocumento td ON n.idtipodocumento = td.idtipodocumento
+    LEFT JOIN estado est ON d.idestado = est.idestado
+WHERE
+    est.exitoso = true -- Solo considerar documentos exitosos
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial;
+
+-- Consulta 7
+
+SELECT
+    numero_completo,
+    COUNT(*) AS repeticiones
+FROM (
+        SELECT
+            CONCAT(n.prefijo, d.numero) AS numero_completo
+        FROM numeracion n
+            JOIN documento d ON n.idnumeracion = d.idnumeracion
+    ) AS numeros_completos
+GROUP BY numero_completo
+HAVING COUNT(*) > 1;

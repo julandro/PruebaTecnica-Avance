@@ -9,8 +9,6 @@ class Server {
 
     this.path = '/api';
 
-    //Conectar a base de datos MONGODB
-    //this.connectDB();
     //Middlewares
     this.middlewares();
     //Routing

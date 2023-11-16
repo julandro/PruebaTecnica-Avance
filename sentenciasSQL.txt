@@ -1,3 +1,5 @@
+-- Crear Tablas
+
 CREATE TABLE
     empresa(
         idempresa SERIAL NOT NULL,
@@ -51,38 +53,30 @@ CREATE TABLE
     );
 
 INSERT INTO
-    tipodocumento (idtipodocumento, descripcion)
-VALUES (1, 'Factura'), (2, 'Nota Debito'), (3, 'Nota Credito');
+    tipodocumento (descripcion)
+VALUES ('Factura'), ('Nota Debito'), ('Nota Credito');
 
 INSERT INTO
-    estado (idestado, descripcion, exitoso)
-VALUES (1, 'Recibido', true), (2, 'En validación', true), (3, 'Sin errores', true), (4, 'Formato Incorrecto', false), (5, 'Con errores', false), (6, 'Fuera de Vigencia', false), (7, 'Fuera de Rango', false);
+    estado (descripcion, exitoso)
+VALUES ('Recibido', true), ('En validación', true), ('Sin errores', true), ('Formato Incorrecto', false), ('Con errores', false), ('Fuera de Vigencia', false), ('Fuera de Rango', false);
 
 INSERT INTO
-    empresa (
-        idempresa,
-        identificacion,
-        razonsocial
-    )
+    empresa (identificacion, razonsocial)
 VALUES (
-        1,
         '12345678',
         'Venta Y Reparacion de Celulares Antonio'
     ), (
-        2,
         '2137613213',
         'Movilitos Leandro'
     ), (
-        3,
         '662973812',
         'ElectriBarranquilla'
     );
 
--- Numeraciones para la empresa 1
+-- Poblado Tablas
 
 INSERT INTO
     numeracion (
-        idnumeracion,
         idtipodocumento,
         idempresa,
         prefijo,
@@ -94,14 +88,12 @@ INSERT INTO
 VALUES (
         1,
         1,
-        1,
         'A',
         1001,
         2000,
         '2023-01-01',
         '2023-12-31'
     ), (
-        2,
         2,
         1,
         'B',
@@ -111,7 +103,6 @@ VALUES (
         '2023-12-31'
     ), (
         3,
-        3,
         1,
         'C',
         3001,
@@ -119,7 +110,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        4,
         1,
         1,
         'D',
@@ -128,7 +118,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        5,
         2,
         1,
         'E',
@@ -137,7 +126,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        6,
         3,
         1,
         'F',
@@ -151,7 +139,6 @@ VALUES (
 
 INSERT INTO
     numeracion (
-        idnumeracion,
         idtipodocumento,
         idempresa,
         prefijo,
@@ -161,7 +148,6 @@ INSERT INTO
         vigenciafinal
     )
 VALUES (
-        7,
         1,
         2,
         'G',
@@ -170,7 +156,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        8,
         2,
         2,
         'H',
@@ -179,7 +164,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        9,
         3,
         2,
         'I',
@@ -188,7 +172,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        10,
         1,
         2,
         'J',
@@ -197,7 +180,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        11,
         2,
         2,
         'K',
@@ -206,7 +188,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        12,
         3,
         2,
         'L',
@@ -220,7 +201,6 @@ VALUES (
 
 INSERT INTO
     numeracion (
-        idnumeracion,
         idtipodocumento,
         idempresa,
         prefijo,
@@ -230,7 +210,6 @@ INSERT INTO
         vigenciafinal
     )
 VALUES (
-        13,
         1,
         3,
         'M',
@@ -239,7 +218,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        14,
         2,
         3,
         'N',
@@ -248,7 +226,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        15,
         3,
         3,
         'O',
@@ -257,7 +234,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        16,
         1,
         3,
         'P',
@@ -266,7 +242,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        17,
         2,
         3,
         'Q',
@@ -275,7 +250,6 @@ VALUES (
         '2023-01-01',
         '2023-12-31'
     ), (
-        18,
         3,
         3,
         'R',
@@ -1278,3 +1252,212 @@ VALUES (
         1100.00,
         165.00
     );
+
+-- -------CONSULTAS------- --
+
+-- Consulta 1
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COUNT(
+        CASE
+            WHEN est.exitoso = false THEN 1
+        END
+    ) AS documentos_fallidos,
+    COUNT(
+        CASE
+            WHEN est.exitoso = true THEN 1
+        END
+    ) AS documentos_exitosos
+FROM empresa e
+    JOIN numeracion n ON e.idempresa = n.idempresa
+    JOIN documento doc ON n.idnumeracion = doc.idnumeracion
+    JOIN estado est ON doc.idestado = est.idestado
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial
+HAVING
+    COUNT(
+        CASE
+            WHEN est.exitoso = false THEN 1
+        END
+    ) > COUNT(
+        CASE
+            WHEN est.exitoso = true THEN 1
+        END
+    );
+
+-- Consulta 2
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN td.descripcion = 'Factura'
+                AND d.fecha BETWEEN '2023-01-01' AND '2023-12-31' THEN 1
+                ELSE 0
+            END
+        ),
+        0
+    ) AS total_facturas,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN td.descripcion = 'Nota Débito'
+                AND d.fecha BETWEEN '2023-01-01' AND '2023-12-31' THEN 1
+                ELSE 0
+            END
+        ),
+        0
+    ) AS total_notas_debito,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN td.descripcion = 'Nota Crédito'
+                AND d.fecha BETWEEN '2023-01-01' AND '2023-12-31' THEN 1
+                ELSE 0
+            END
+        ),
+        0
+    ) AS total_notas_credito
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento d ON n.idnumeracion = d.idnumeracion
+    LEFT JOIN tipodocumento td ON n.idtipodocumento = td.idtipodocumento
+WHERE
+    d.fecha BETWEEN '2023-01-01' AND '2023-12-31'
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial;
+
+-- Consulta 3
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    est.descripcion AS estado,
+    COUNT(d.iddocumento) AS cantidad_documentos
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento d ON n.idnumeracion = d.idnumeracion
+    LEFT JOIN estado est ON d.idestado = est.idestado
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    est.descripcion
+ORDER BY
+    e.idempresa,
+    est.descripcion;
+
+-- Consulta 4
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COUNT(
+        CASE
+            WHEN est.exitoso = false THEN 1
+        END
+    ) AS documentos_no_exitosos
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento doc ON n.idnumeracion = doc.idnumeracion
+    LEFT JOIN estado est ON doc.idestado = est.idestado
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial
+HAVING
+    COUNT(
+        CASE
+            WHEN est.exitoso = false THEN 1
+        END
+    ) > 3;
+
+-- Consulta 5
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COUNT(
+        CASE
+            WHEN doc.numero < n.consecutivoinicial
+            OR doc.numero > n.consecutivofinal THEN 1
+            WHEN doc.fecha < n.vigenciainicial
+            OR doc.fecha > n.vigenciafinal THEN 1
+            ELSE NULL
+        END
+    ) AS documentos_fuera_rango_vigencia
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento doc ON n.idnumeracion = doc.idnumeracion
+WHERE (
+        doc.numero IS NOT NULL
+        AND (
+            doc.numero < n.consecutivoinicial
+            OR doc.numero > n.consecutivofinal
+        )
+    )
+    OR (
+        doc.fecha IS NOT NULL
+        AND (
+            doc.fecha < n.vigenciainicial
+            OR doc.fecha > n.vigenciafinal
+        )
+    )
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial;
+
+-- Consulta 6
+
+SELECT
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial,
+    COALESCE(
+        SUM(
+            CASE
+                WHEN td.descripcion = 'Factura' THEN d.base + d.impuestos
+                ELSE 0
+            END
+        ),
+        0
+    ) AS total_dinero_recibido
+FROM empresa e
+    LEFT JOIN numeracion n ON e.idempresa = n.idempresa
+    LEFT JOIN documento d ON n.idnumeracion = d.idnumeracion
+    LEFT JOIN tipodocumento td ON n.idtipodocumento = td.idtipodocumento
+    LEFT JOIN estado est ON d.idestado = est.idestado
+WHERE
+    est.exitoso = true -- Solo considerar documentos exitosos
+GROUP BY
+    e.idempresa,
+    e.identificacion,
+    e.razonsocial;
+
+-- Consulta 7
+
+SELECT
+    numero_completo,
+    COUNT(*) AS repeticiones
+FROM (
+        SELECT
+            CONCAT(n.prefijo, d.numero) AS numero_completo
+        FROM numeracion n
+            JOIN documento d ON n.idnumeracion = d.idnumeracion
+    ) AS numeros_completos
+GROUP BY numero_completo
+HAVING COUNT(*) > 1;
